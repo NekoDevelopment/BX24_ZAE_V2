@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <script src="js/bootstrap.bundle.js"></script>
+    <script src="js/jquery-ui/jquery-ui.min.js"></script>
+    <link rel="icon" href="img/bitrix24logo.jpg">
+    <link href="js/jquery-ui/jquery-ui.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>Zeiterfassung</title>
+    <style>
+        #weekendDayView {
+            border-radius: 5px;
+            border: 1px solid transparent;
+            border-top: none transparent;
+            outline: none;
+            background-color: transparent;
+            color: #006198;
+        }
+        #toggleWeekend {
+            border: #006198 1px solid;
+            border-radius: 5px;
+            outline: none;
+            font-size: 40px;
+            background-color: transparent;
+            color: #006198;
+        }
+        .time-list-col {
+            width: 20%;
+            max-width: 20%;
+            flex: 0 0 20%;
+        }
+        .time-list-col-weekend {
+            width: 50%;
+            max-width: 50%;
+            flex: 0 0 50%;
+        }
+        .taskId {
+            text-decoration: none;
+            color: white;
+        }
+        .taskId:hover {
+            text-decoration: blink;
+            color: white;
+        }
+        .time-list {
+            border: 2px solid lightgray;
+            border-radius: 7px;
+            padding: 10px 10px;
+            overflow:hidden;
+            overflow-y: scroll;
+            max-height: 300px;
+            height: 300px;
+            flex: 0 0 300px;
+        }
+
+        .time-list li {
+            margin: 3px 0px;
+            background-color: royalblue;
+            list-style: none;
+            border-radius: 7px;
+            border: 2px solid transparent;
+            color: white;
+            padding: 8px 8px;
+            font-size: 90%;
+            transition: background-color 0.5s;
+        }
+
+        .time-list li:hover {
+            cursor: pointer;
+            background-color: steelblue;
+            transition: background-color 0.5s;
+        }
+        #calendarWeek {
+            color: #006198;
+        }
+
+        #next-week-button {
+            border: none;
+            outline: none;
+            font-size: 40px;
+            background-color: transparent;
+            color: #006198;
+        }
+
+        #before-week-button {
+            border: none;
+            outline: none;
+            font-size: 40px;
+            background-color: transparent;
+            color: #006198;
+        }
+
+        #before-week-button:hover {
+            border: none;
+            outline: none;
+            font-size: 40px;
+            background-color: transparent;
+            color: darkblue;
+        }
+
+        #next-week-button:hover {
+            border: none;
+            outline: none;
+            font-size: 40px;
+            background-color: transparent;
+            color: darkblue;
+        }
+
+        .time-list-col > ::-webkit-scrollbar {
+            width: 5px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+        }
+
+        .time-list-col >  ::-webkit-scrollbar-track {
+            background: cornflowerblue;
+        }
+        .time-list-col >  ::-webkit-scrollbar-thumb {
+            background: #006198;
+        }
+
+        .time-list-col > ::-webkit-scrollbar-thumb:hover {
+            background: #006198;
+        }
+
+        .time-list-col-weekend > ::-webkit-scrollbar {
+            width: 5px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+        }
+
+        .time-list-col-weekend >  ::-webkit-scrollbar-track {
+            background: cornflowerblue;
+        }
+        .time-list-col-weekend >  ::-webkit-scrollbar-thumb {
+            background: #006198;
+        }
+
+        .time-list-col-weekend > ::-webkit-scrollbar-thumb:hover {
+            background: #006198;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: cornflowerblue;
+        }
+         ::-webkit-scrollbar-thumb {
+            background: #006198;
+        }
+
+         ::-webkit-scrollbar-thumb:hover {
+            background: #006198;
+        }
+
+        #taskSearch {
+
+        }
+
+        #taskSearchId {
+            border: 2px solid lightskyblue;
+            border-radius: 5px;
+            padding: 0.7% 1%;
+            font-size: 100%;
+        }
+
+        #taskSearchResults li {
+            color: darkblue;
+            margin: 5px 0px;
+            list-style: none;
+            border-radius: 7px;
+            border: 1px solid dodgerblue;
+            padding: 7px 7px;
+            font-size: 90%;
+        }
+        #taskSearchResults {
+            border: 1px solid lightgray;
+            border-radius: 7px;
+            padding: 10px 10px;
+            overflow-y: scroll;
+            max-height: 200px;
+            height: 200px;
+        }
+
+        #taskRec li {
+            color: royalblue;
+            margin: 5px 0px;
+            list-style: none;
+            border-radius: 7px;
+            border: 1px solid dodgerblue;
+            padding: 7px 7px;
+            font-size: 90%;
+        }
+
+        .recId {
+            text-decoration: none;
+            color: royalblue;
+        }
+        #taskRec {
+            border: 1px solid lightgray;
+            border-radius: 7px;
+            padding: 10px 10px;
+            overflow-y: scroll;
+            max-height: 200px;
+            height: 200px;
+        }
+
+        #taskRec li:hover {
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+        }
+
+        #taskRec li:hover a{
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+        }
+
+
+        #taskSearchResults li:hover {
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+        }
+
+        .filter {
+
+        }
+
+        .filterTitle {
+            color: #006198;
+        }
+
+        .filters {
+            padding: 0.8%;
+            font-size: 100%;
+        }
+
+        .statisticLink {
+            text-decoration: none;
+            color: cornflowerblue;
+        }
+        .statisticLink:hover {
+            text-decoration: none;
+            color: #006198;
+        }
+
+        .quickAdd {
+            margin: 3px 0px;
+            color: royalblue;
+            list-style: none;
+            border-radius: 7px;
+            border: 2px solid royalblue;
+            font-size: 90%;
+            transition: background-color 0.5s;
+        }
+
+        .quickAdd:hover {
+            cursor: pointer;
+            background-color: royalblue;
+            transition: background-color 0.5s;
+        }
+
+        .favStar:hover {
+            color: yellow;
+
+        }
+
+        .activeFavStar {
+            color: gold;
+        }
+
+
+        #create-window {
+
+            display: block;
+            position: fixed;
+            left: 50%;
+            top: 25%;
+            background-color: white;
+            transform: translate(-50%, 5%);
+            border: 3px solid cornflowerblue;
+            border-radius: 7px;
+        }
+        #create-window-form-container {
+            padding: 3%;
+        }
+
+        #create-window-submit-button {
+            background-color: mediumseagreen;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+
+        }
+
+        #create-window-abort-button {
+            background-color: indianred;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+        }
+
+        #create-window-comment {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+        }
+
+        #create-window-datetime {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #create-window-minute-select {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #create-window-hour-select {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #create-window {
+
+            display: block;
+            position: fixed;
+            left: 50%;
+            top: 25%;
+            background-color: white;
+            transform: translate(-50%, 5%);
+            border: 3px solid cornflowerblue;
+            border-radius: 7px;
+        }
+        #create-window-form-container {
+            padding: 3%;
+        }
+
+        #create-window-submit-button {
+            background-color: mediumseagreen;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+
+        }
+
+        #create-window-abort-button {
+            background-color: indianred;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+        }
+
+        #create-window-comment {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+        }
+
+        #create-window-datetime {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #create-window-minute-select {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #create-window-hour-select {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #edit-window {
+
+            display: block;
+            position: fixed;
+            left: 50%;
+            top: 25%;
+            background-color: white;
+            transform: translate(-50%, 5%);
+            border: 3px solid cornflowerblue;
+            border-radius: 7px;
+        }
+        #edit-window-form-container {
+            padding: 3%;
+        }
+
+        #edit-window-submit-button {
+            background-color: mediumseagreen;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+
+        }
+
+        #edit-window-abort-button {
+            background-color: indianred;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+        }
+        #edit-window-delete-button {
+            background-color: red;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+        }
+        #edit-window-comment {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+        }
+
+        #edit-window-datetime {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #edit-window-minute-select {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+
+        #edit-window-hour-select {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
+        #window-blocker {
+            top: 0;
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.25);
+        }
+    </style>
+    <script>
+        $(document).ready(function () {
+            $("#weekendDayView").hide()
+            $("#weekendHr").hide()
+            $("#window-blocker").hide()
+            $("#create-window").hide()
+            $("#edit-window").hide()
+        })
+
+
+        function weekendToggler() {
+            console.log($("#weekendDayView").is(":visible"))
+            if (!$("#weekendDayView").is(":visible")) {
+                $("#weekendDayView").show("slow")
+                $("#toggleWeekend").text("▲")
+            } else {
+                $("#weekendDayView").hide("slow")
+                $("#toggleWeekend").text("▼")
+            }
+
+        }
+    </script>
+</head>
+<body>
+<div id="window-blocker">
+    <form action="#" id="create-window" class="justify-content-center">
+        <h4 class="row justify-content-center mt-2">Zeit erfassen</h4>
+        <hr>
+        <p id="create-window-task-name" class="row mx-2 mt-1">Aufgabe #0001 - Drucker Bernd reparieren</p>
+        <div class="row mx-2 mt-1">
+            <input type="datetime-local" id="create-window-datetime" class="col-3" required >
+            <div class="col-3">
+                <select id="create-window-hour-select">
+                    <option value="0">0h</option>
+                    <option value="1">1h</option>
+                    <option value="2">2h</option>
+                    <option value="3">3h</option>
+                    <option value="4">4h</option>
+                    <option value="5">5h</option>
+                    <option value="6">6h</option>
+                    <option value="7">7h</option>
+                    <option value="8">8h</option>
+                </select>
+                <select id="create-window-minute-select">
+                    <option value="0">0m</option>
+                    <option value="15" selected="selected">15m</option>
+                    <option value="30">30m</option>
+                    <option value="45">45m</option>
+                </select>
+            </div>
+
+        </div>
+
+        <textarea id="create-window-comment" class="mx-2 mt-1 row"  required placeholder="Tätigkeitsbeschreibung.." rows="5" cols="100%"></textarea>
+        <div class="row mx-2 mt-3 mb-1">
+            <button type="submit" id="create-window-submit-button" class="col-3">Erfassen</button>
+            <div class="col-6"></div>
+            <button type="button" onclick="" id="create-window-abort-button" class="col-3">Abbrechen</button>
+        </div>
+    </form>
+
+    <form action="#" id="edit-window" class="justify-content-center">
+        <h4 class="row justify-content-center mt-2">Erfassung aktualisieren</h4>
+        <hr>
+        <p id="edit-window-task-name" class="row mx-2 mt-1">Aufgabe #0001 - Drucker Bernd reparieren</p>
+        <div class="row mx-2 mt-1">
+            <input type="datetime-local" id="edit-window-datetime" class="col-3" required >
+            <div class="col-3">
+                <select id="edit-window-hour-select">
+                    <option value="0">0h</option>
+                    <option value="1">1h</option>
+                    <option value="2">2h</option>
+                    <option value="3">3h</option>
+                    <option value="4">4h</option>
+                    <option value="5">5h</option>
+                    <option value="6">6h</option>
+                    <option value="7">7h</option>
+                    <option value="8">8h</option>
+                </select>
+                <select id="edit-window-minute-select">
+                    <option value="0">0m</option>
+                    <option value="15" selected="selected">15m</option>
+                    <option value="30">30m</option>
+                    <option value="45">45m</option>
+                </select>
+            </div>
+
+        </div>
+
+        <textarea id="edit-window-comment" class="mx-2 mt-1 row"  required placeholder="Tätigkeitsbeschreibung.." rows="5" cols="100%"></textarea>
+        <div class="row mx-2 mt-3 mb-1">
+            <button type="submit" id="edit-window-submit-button" class="col-3">Aktualisieren</button>
+            <div class="col-2"></div>
+            <button type="button" onclick="" id="edit-window-delete-button" class="col-2">Löschen</button>
+            <div class="col-2"></div>
+            <button type="button" onclick="" id="edit-window-abort-button" class="col-3">Abbrechen</button>
+        </div>
+    </form>
+</div>
+<div class="container-fluid" id="main-view">
+    <hr style="color: darkblue">
+    <div class="row">
+        <h1 class="my-2 py-2 ms-5 col-9" style="color: deepskyblue"><img src="img/img.png" class="w-25"> | Zeiterfassung</h1>
+        <div class="container col-2 my-2 py-2 text-end">
+            <div id="bx24display_name" style="color: royalblue" class="fs-4">bx24display_name</div>
+            <h5 onclick="logout()" class="fs-5"><a href="#" class="text-decoration-none">Logout</a></h5>
+        </div>
+    </div>
+    <hr style="color: darkblue">
+
+
+    <div class="row justify-content-center my-3">
+        <button class="col-1" id="before-week-button" onclick="beforeWeek()"><</button>
+        <h2 id="calendarWeek" class="col-4 my-3 text-center">KW 1 - 01.01.2002-07.01.2022</h2>
+        <button class="col-1" id="next-week-button" onclick="nextWeek()">></button>
+        <div class="text-center">
+            <p><a href="https://statlink.de" class="statisticLink">Statistiken ansehen</a></p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="time-list-col">
+            <p id="mondayTitle">Montag 0h</p>
+            <ul class="time-list" id="monday">
+                <li class="row" id="test">
+                    <div>
+                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
+                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
+                    </div>
+                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
+                </li>
+                <li class="row" id="test">
+                    <div>
+                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
+                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
+                    </div>
+                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
+                </li>
+                <li class="row" id="test">
+                    <div>
+                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
+                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
+                    </div>
+                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
+                </li>
+                <li class="row" id="test">
+                    <div>
+                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
+                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
+                    </div>
+                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
+                </li>
+                <div>
+                    <p class="taskId fs-2 text-center quickAdd" id="quickAddMonday">+</p>
+                </div>
+            </ul>
+
+        </div>
+        <div class="time-list-col">
+            <p id="tuesdayTitle">Dienstag</p>
+            <ul class="time-list" id="tuesday">
+                <div>
+                    <p class="taskId fs-2 text-center quickAdd" id="quickAddTuesday">+</p>
+                </div>
+            </ul>
+        </div>
+        <div class="time-list-col">
+            <p id="wednesdayTitle">Mittwoch</p>
+            <ul class="time-list" id="wednesday">
+                <div>
+                    <p class="taskId fs-2 text-center quickAdd" id="quickAddWednesday">+</p>
+                </div>
+            </ul>
+        </div>
+        <div class="time-list-col">
+            <p id="thursdayTitle">Donnerstag</p>
+            <ul class="time-list" id="thursday">
+                <div>
+                    <p class="taskId fs-2 text-center quickAdd" id="quickAddThursday">+</p>
+                </div>
+            </ul>
+        </div>
+        <div class="time-list-col">
+            <p id="fridayTitle">Freitag</p>
+            <ul class="time-list" id="friday">
+                <div>
+                    <p class="taskId fs-2 text-center quickAdd" id="quickAddFriday">+</p>
+                </div>
+            </ul>
+        </div>
+
+    </div>
+    <div id="weekendToggler" class="container float-start col-6">
+        <div class="row justify-content-center">
+            <button id="toggleWeekend" class="fs-4 col-12" onclick="weekendToggler()">
+                ▼
+            </button>
+        </div>
+        <div class="row justify-content-center mt-2" id="weekendDayView">
+
+            <div class="time-list-col-weekend mt-1">
+                <p id="saturdayTitle">Samstag</p>
+                <ul class="time-list" id="saturday">
+                    <div>
+                        <p class="taskId fs-2 text-center quickAdd" id="quickAddSaturday">+</p>
+                    </div>
+                </ul>
+            </div>
+            <div class="time-list-col-weekend mt-1">
+                <p id="sundayTitle">Sonntag</p>
+                <ul class="time-list" id="sunday">
+                    <div>
+                        <p class="taskId fs-2 text-center quickAdd" id="quickAddSunday">+</p>
+                    </div>
+                </ul>
+            </div>
+
+        </div>
+    <div class="row justify-content-center my-2">
+        <div>
+            <ul id="taskRec">
+                <li class="row" id="pinned#1234">
+                    <div>
+                        <div class="recTitle my-1 float-start fs-6"><a href="https://test/1234" class="recId">#1234 </a> Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
+                        <div id="fav#1234" class="float-end fs-4 activeFavStar">★</div>
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+    </div>
+    </div>
+
+    <div class="container float-start col-6">
+        <div class="row justify-content-center mb-2">
+            <form id="taskSearch" class="col-12 text-start" action="#">
+                <input type="text" class="float-start" id="taskSearchId" placeholder="Nach einer Aufgabe suchen.." maxlength="50" size="50">
+                <span class="filters float-end">
+                    <label for="taskSearchOnlyActive" class="filterTitle ms-2 me-1">Aktiv</label>
+                    <input type="checkbox" id="taskSearchOnlyActive" class="filter">
+                    <label for="executorOnly" class="filterTitle ms-2 me-1">Verantwortlicher</label>
+                    <input type="checkbox" id="executorOnly" class="filter">
+                    <label for="memberOnly" class="filterTitle ms-2 me-1">Mitwirkender</label>
+                    <input type="checkbox" id="memberOnly" class="filter">
+                    <label for="watcherOnly" class="filterTitle ms-2 me-1">Beobachter</label>
+                    <input type="checkbox" id="watcherOnly" class="filter">
+                </span>
+            </form>
+        </div>
+
+        <div class="row justify-content-start">
+            <br>
+            <div class="col-12">
+                <ul id="taskSearchResults">
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <hr style="color: lightgray" class="container-fluid">
+    <nav>
+        <div class="container justify-content-center navbar-expand navbar navbar-dark">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link link-primary" href="mailto:helpdesk@cms-sudhaus.de">Hilfe</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link link-primary" href="/tos"></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link link-primary statisticLink" href="https://stat.com">Statistiken</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link link-primary statisticLink" href="https://crm.cms-sudhaus.de">Bitrix</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <hr style="color: lightgray;" class="container-fluid">
+
+</div>
+</body>
+</html>
