@@ -3,8 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <title>BX24 - ZAE Authentication</title>
+    <script src="js/jquery-3.6.0.min.js"></script>
 </head>
 <body>
+<script>
+    let apiUrl = "https://zeiterfassung.rfsmediagroup.de/api/"
+    function findGetParameter(parameterName) {
+        let result = null,
+            tmp = [];
+        let items = location.search.substr(1).split("&");
+        for (var index = 0; index < items.length; index++) {
+            tmp = items[index].split("=");
+            if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
+        }
+        return result;
+    }
 
+    $(document).ready(function () {
+        if(findGetParameter("code") != null) {
+            let url = apiUrl + "verify?code=" + findGetParameter("code")
+            let xhttp = new XMLHttpRequest();
+            xhttp.open("GET", url, false);
+            xhttp.setRequestHeader("Content-Type", "application/json");
+            try {
+                xhttp.send()
+                console.log(xhttp.status)
+                let json = xhttp.responseText
+                json = JSON.parse(json)
+                if(xhttp.status === 200) {
+                    let date = new Date();
+                    date.setTime(date.getTime() + (365*24*60*60*1000));
+                    let expires = "expires="+ date.toUTCString();
+                    console.log(json)
+                    document.cookie = "bx24_user_id=" + json.user_id + ";" + expires + ";path=/";
+                    document.cookie = "bx24_token=" + json.access_token + ";" + expires + ";path=/";
+                    document.cookie = "bx24_refresh=" + json.refresh_token + ";" + expires + ";path=/";
+                    window.location.href = "/index.html"
+                } else {
+                    alert("ERROR WHILE LOGGING IN, REMOTE-SERVER RETURNED " + xhttp.status + " | " + xhttp.responseText)
+                }
+            } catch (e) {
+                return false;
+            }
+        }
+    })
+
+</script>
 </body>
 </html>

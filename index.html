@@ -4,6 +4,7 @@
     <script src="js/jquery-3.6.0.min.js"></script>
     <link href="css/bootstrap.css" rel="stylesheet">
     <script src="js/bootstrap.bundle.js"></script>
+    <script src="js/CookieGetter.js"></script>
     <script src="js/jquery-ui/jquery-ui.min.js"></script>
     <link rel="icon" href="img/bitrix24logo.jpg">
     <link href="js/jquery-ui/jquery-ui.css" rel="stylesheet">
@@ -169,6 +170,30 @@
             font-size: 100%;
         }
 
+        #quickadd-taskSearchId {
+            border: 2px solid lightskyblue;
+            border-radius: 5px;
+            padding: 0.7% 1%;
+            font-size: 100%;
+        }
+        #quickadd-tasksearch li {
+            color: darkblue;
+            margin: 5px 0px;
+            list-style: none;
+            border-radius: 7px;
+            border: 1px solid dodgerblue;
+            padding: 7px 7px;
+            font-size: 90%;
+        }
+        #quickadd-tasksearch {
+            border: 1px solid lightgray;
+            border-radius: 7px;
+            padding: 10px 10px;
+            overflow-y: scroll;
+            max-height: 100px;
+            height: 100px;
+        }
+
         #taskSearchResults li {
             color: darkblue;
             margin: 5px 0px;
@@ -209,6 +234,35 @@
             max-height: 200px;
             height: 200px;
         }
+        #quickadd-tasksearch {
+            border: 1px solid lightgray;
+            border-radius: 7px;
+            padding: 10px 10px;
+            overflow-y: scroll;
+            max-height: 200px;
+            height: 200px;
+        }
+        #quickadd-taskrec {
+            border: 1px solid lightgray;
+            border-radius: 7px;
+            padding: 10px 10px;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            max-height: 400px;
+            height: 400px;
+        }
+
+        #quickadd-taskrec li:hover {
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+        }
+
+        #quickadd-taskrec li:hover a{
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+        }
 
         #taskRec li:hover {
             cursor: pointer;
@@ -229,6 +283,12 @@
             background-color: steelblue;
         }
 
+
+        #quickadd-tasksearch li:hover {
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+        }
         .filter {
 
         }
@@ -272,6 +332,10 @@
 
         }
 
+        .favStarSearch:hover {
+            color: yellow;
+
+        }
         .activeFavStar {
             color: gold;
         }
@@ -398,6 +462,17 @@
             border: 3px solid cornflowerblue;
             border-radius: 7px;
         }
+
+        #quickadd-window {
+            display: block;
+            position: fixed;
+            left: 50%;
+            top: 25%;
+            background-color: white;
+            transform: translate(-50%, 5%);
+            border: 3px solid cornflowerblue;
+            border-radius: 7px;
+        }
         #edit-window-form-container {
             padding: 3%;
         }
@@ -412,6 +487,13 @@
         }
 
         #edit-window-abort-button {
+            background-color: indianred;
+            border-radius: 7px;
+            border: 1px solid white;
+            color: white;
+            padding: 1% 4%;
+        }
+        #quickadd-window-abort-button {
             background-color: indianred;
             border-radius: 7px;
             border: 1px solid white;
@@ -435,7 +517,11 @@
             border: 2px solid cornflowerblue;
             color: black;
         }
-
+        #quickadd-window-datetime {
+            border-radius: 7px;
+            border: 2px solid cornflowerblue;
+            color: black;
+        }
         #edit-window-minute-select {
             border-radius: 7px;
             border: 2px solid cornflowerblue;
@@ -452,35 +538,1035 @@
             display: block;
             position: absolute;
             width: 100%;
-            height: 100%;
+            height: auto;
+            overflow:hidden;
             background-color: rgba(0,0,0,0.25);
         }
+
+        .loader {
+            display: block;
+            border: 16px solid #f3f3f3; /* Light grey */
+            border-top: 16px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            position: absolute;
+            top: 45%;
+            left: 47%;
+            transform: translate(-50%, -50%);
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
     </style>
     <script>
+        let currentlyEditingTime;
+        let currentlyCreatingTask;
+        let mondayTotal = 0
+        let tuesdayTotal = 0
+        let wednesdayTotal = 0
+        let thursdayTotal = 0
+        let fridayTotal = 0
+        let saturdayTotal = 0
+        let sundayTotal = 0
+        let mondayQuickTime;
+        let tuesdayQuickTime;
+        let wednesdayQuickTime;
+        let thursdayQuickTime;
+        let fridayQuickTime;
+        let saturdayQuickTime;
+        let sundayQuickTime;
+        let currentQuick;
+        let timeTaskMap = {}
+        let tasks = {}
+        let currentStartDate = new Date()
+        let apiUrl = "https://zeiterfassung.rfsmediagroup.de/api/"
+        let redirectUrl = "http://crm.cms-sudhaus.de/oauth/authorize/?client_id=local.62f147eb80d766.05055944&response_type=code&redirect_uri=https%3A%2F%2Fzeiterfassung.rfsmediagroup.de%2Foauth2.html"
         $(document).ready(function () {
-            $("#weekendDayView").hide()
-            $("#weekendHr").hide()
             $("#window-blocker").hide()
             $("#create-window").hide()
             $("#edit-window").hide()
+            $("#quickadd-window").hide()
+            if(verifyOAuth2()) {
+                loadUser()
+                thisWeek(new Date())
+                loadRecommends()
+                loadSearchTasks()
+                $(".loader").hide()
+                $("#main-view").show()
+                weekendToggler()
+                $("#taskSearch").on('input', function () {
+                    loadSearchTasks()
+                })
+
+                $('#main-view').on('click','li', function () {
+                    id = $(this).attr("id")
+                    if (id.includes("rec#")) {
+                        $(this).attr('id')
+                        id = id.replace("rec#", "")
+
+                        addTime(getLatestDate() ,id)
+                    } else if (id.includes("se#")) {
+                        $(this).attr('id')
+                        id = id.replace("se#", "")
+
+                        addTime(getLatestDate() ,id)
+                    } else if (id.includes("pin#")) {
+                        $(this).attr('id')
+                        id = id.replace("pin#", "")
+
+                        addTime(getLatestDate() ,id)
+                    } else {
+                        editTime($(this).attr('id'))
+                    }
+
+                })
+                $("#quickadd-window-abort-button").click(function () {
+                    $("#window-blocker").hide()
+                    $("#quickadd-window").hide()
+                })
+
+                $("#create-window-abort-button").click(function () {
+                    $("#window-blocker").hide()
+                    $("#create-window").hide()
+                })
+
+
+                $("#edit-window-abort-button").click(function () {
+                    $("#window-blocker").hide()
+                    $("#edit-window").hide()
+                })
+
+                $("#edit-window-delete-button").click(function () {
+                    deleteTime(currentlyEditingTime)
+                    $("#window-blocker").hide()
+                    $("#edit-window").hide()
+                })
+                $("#create-window-submit-button").click(function () {
+                    saveNewTime()
+                })
+
+                $("#edit-window-submit-button").click(function () {
+                    saveEditTime()
+                })
+            } else {
+                if (getCookie("bx24_refresh") != null && getCookie("bx24_token") != null) {
+                    window.location.href = redirectUrl
+                } else {
+                    window.location.href = redirectUrl
+                }
+            }
         })
 
+        function deleteTime(timeId) {
+            try {
+                let url = apiUrl + "time/delete"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : getCookie("bx24_token"),
+                    "taskId" : timeTaskMap[currentlyEditingTime],
+                    "timeId" : currentlyEditingTime,
+                }
+                json = JSON.stringify(json)
+                xhttp.send(json)
+                thisWeek()
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
 
+        }
+        function editTime(timeId) {
+            currentlyEditingTime = timeId
+            let taskId = timeTaskMap[parseInt(timeId)]
+            let time = loadTime(taskId, timeId)
+            let mins = parseInt(time.minutes)
+            let date = new Date(time.createdDate)
+            let comment = time.commentText
+            $("#edit-window-task-name").text(tasks[parseInt(taskId)].title)
+            let offset = (new Date()).getTimezoneOffset() * 60000;
+            date = new Date(date - offset)
+            $("#edit-window-minute-select").val(Math.round(mins))
+            document.getElementById("edit-window-datetime").value = date.toISOString().slice(0,16);
+            $("#edit-window-comment").val(comment)
+            $("#edit-window-minute-select").val(mins)
+            $("#window-blocker").show()
+            $("#edit-window").show()
+
+        }
+
+        function saveEditTime() {
+            try {
+                let comment = $("#edit-window-comment").val()
+                let date = new Date($("#edit-window-datetime").val())
+                let minutes = parseInt($("#edit-window-minute-select").val())
+                if(minutes > 0 && minutes < 1440) {
+                    let url = apiUrl + "time/edit"
+                    let xhttp = new XMLHttpRequest();
+                    xhttp.open("POST", url, false);
+                    xhttp.setRequestHeader("Content-Type", "application/json");
+                    xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                    xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                    xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                    let json = {
+                        "auth" : getCookie("bx24_token"),
+                        "taskId" : timeTaskMap[currentlyEditingTime],
+                        "timeId" : currentlyEditingTime,
+                        "commentText" : comment,
+                        "createdDate" : date,
+                        "minutes" : minutes
+                    }
+                    json = JSON.stringify(json)
+                    xhttp.send(json)
+                    $("#edit-window").hide()
+                    $("#window-blocker").hide()
+                    thisWeek()
+                }
+            } catch (e) {
+            alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+            logout()
+        }
+
+        }
+        function quickAdd(date) {
+            loadQuickAddRecommends()
+            let offset = (new Date()).getTimezoneOffset() * 60000;
+            date = new Date(date - offset)
+            document.getElementById("quickadd-window-datetime").value = date.toISOString().slice(0,16);
+            $("#window-blocker").show()
+            $("#quickadd-window").show()
+        }
+
+        function saveNewTime() {
+            try {
+                let comment = $("#create-window-comment").val()
+                let date = new Date($("#create-window-datetime").val())
+                let hours = parseInt($("#create-window-hour-select").val())
+                let minutes = parseInt($("#create-window-minute-select").val())
+                let totalMinutes = hours * 60 + minutes
+                let url = apiUrl + "time/add"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : getCookie("bx24_token"),
+                    "taskId" : currentlyCreatingTask,
+                    "commentText" : comment,
+                    "createdDate" : date,
+                    "minutes" : totalMinutes
+                }
+                json = JSON.stringify(json)
+                xhttp.send(json)
+                $("#create-window").hide()
+                $("#window-blocker").hide()
+                thisWeek()
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+
+        function getLatestDate() {
+            try {
+                let url = apiUrl + "time/latest"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : getCookie("bx24_token"),
+                }
+                json = JSON.stringify(json)
+                xhttp.send(json)
+                console.log(xhttp.responseText)
+                let result = JSON.parse(xhttp.responseText)
+                return new Date(new Date(result.createdDate).getTime() + parseInt(result.minutes) * 60000);
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+        }
         function weekendToggler() {
             console.log($("#weekendDayView").is(":visible"))
             if (!$("#weekendDayView").is(":visible")) {
                 $("#weekendDayView").show("slow")
                 $("#toggleWeekend").text("▲")
+                $("#taskSearchResults").css({"maxHeight" : "565px", "height" : "565px"}, "slow")
             } else {
                 $("#weekendDayView").hide("slow")
                 $("#toggleWeekend").text("▼")
+                $("#taskSearchResults").css({"maxHeight" : "200px", "height" : "200px"}, "slow")
+            }
+        }
+        function refreshOAuth2() {
+
+        }
+        function verifyOAuth2() {
+            let token = getCookie("bx24_token")
+            if (token == null) {
+                console.log("Not logged in yet");
+            } else {
+                let url = apiUrl + "user"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : token
+                }
+                json = JSON.stringify(json)
+                try {
+                    xhttp.send(json)
+                    return xhttp.status === 200;
+                } catch (e) {
+                    return false;
+                }
+
+            }
+        }
+
+        function getCalendarWeek(date) {
+            date = new Date(date)
+            let nDay = (date.getDay() + 6) % 7;
+
+            date.setDate(date.getDate() - nDay + 3);
+
+            let n1stThursday = date.valueOf();
+
+            date.setMonth(0, 1);
+
+            if (date.getDay() !== 4) {
+                date.setMonth(0, 1 + ((4 - date.getDay()) + 7) % 7);
+            }
+            return 1 + Math.ceil((n1stThursday - date) / 604800000);
+        }
+
+        function getFirstDayOfWeek(d) {
+            let date = new Date(d);
+            let day = date.getDay();
+            let diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            let res = new Date(date.setDate(diff));
+            return new Date(res.toDateString())
+        }
+
+        function getLastDayOfWeek(d) {
+            d = new Date(d);
+            let res = new Date(d.setDate(d.getDate() - d.getDay() + 7));
+            return new Date(res.toDateString())
+        }
+
+        function thisWeek() {
+            currentStartDate = getFirstDayOfWeek(new Date())
+            loadTimes(getFirstDayOfWeek(currentStartDate), getLastDayOfWeek(currentStartDate))
+
+        }
+
+        function nextWeek() {
+            currentStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() + 7))
+            console.log(currentStartDate)
+            console.log(getFirstDayOfWeek(currentStartDate))
+            console.log(getLastDayOfWeek(currentStartDate))
+            loadTimes(getFirstDayOfWeek(currentStartDate), getLastDayOfWeek(currentStartDate))
+        }
+
+        function beforeWeek() {
+            currentStartDate = new Date(currentStartDate.setDate(currentStartDate.getDate() - 7))
+            loadTimes(getFirstDayOfWeek(currentStartDate), getLastDayOfWeek(currentStartDate))
+        }
+        function loadTimes(startDate, endDate) {
+             setStatisticLinks(startDate)
+             mondayTotal = 0
+             tuesdayTotal = 0
+             wednesdayTotal = 0
+             thursdayTotal = 0
+             fridayTotal = 0
+             saturdayTotal = 0
+             sundayTotal = 0
+            document.getElementById("calendarWeek").innerHTML = "KW " + getCalendarWeek(startDate) + " | " + startDate.getDate() + "." + (startDate.getMonth()+1) + "." + startDate.getFullYear() + " - " + endDate.getDate() + "." + (endDate.getMonth()+1) + "." + endDate.getFullYear();
+            let userId = getCookie("bx24_user_id")
+            $("#monday").empty()
+            $("#thursday").empty()
+            $("#wednesday").empty()
+            $("#tuesday").empty()
+            $("#friday").empty()
+            $("#saturday").empty()
+            $("#sunday").empty()
+            let token = getCookie("bx24_token")
+            let url = apiUrl + "time/list"
+            let xhttp = new XMLHttpRequest();
+            xhttp.open("POST", url, false);
+            xhttp.setRequestHeader("Content-Type", "application/json");
+            xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+            xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+            xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+            let json = {
+                "auth" : token,
+                "startDate" : startDate,
+                "endDate" : endDate,
+            }
+            json = JSON.stringify(json)
+            try {
+                xhttp.send(json)
+                if  (xhttp.status === 401) {
+                    if (refreshOAuth2() === false) {
+                        window.location.href = redirectUrl
+                    }
+                } else if(xhttp.status === 200) {
+                    let result = JSON.parse(xhttp.responseText)
+                    if(!(result.length === 0)) {
+                        let taskIds = []
+                        for(let time of result) {
+                            console.log(time.taskId)
+                            taskIds.push(time.taskId)
+                        }
+                        loadTasks(taskIds)
+                        for(let time of result) {
+                            timeTaskMap[time.id] = time.taskId
+                            let date = new Date(time.createdDate)
+                            let hour = 0
+                            if (date.getHours() < 10) {
+                                hour = "0"+ date.getHours()
+                            } else {
+                                hour = date.getHours()
+                            }
+                            let mins = "0"
+                            if (date.getMinutes().toString().length === 1) {
+                                mins = "0" + date.getMinutes()
+                            } else {
+                                mins = date.getMinutes().toString()
+                            }
+
+                            let minutesSpent = time.minutes
+                            let ts = ""
+                            ts = minutesSpent + "m"
+                            let startTime = hour + ":" + mins
+
+                            date = new Date(date.getTime() + minutesSpent * 60000);
+                            hour = 0
+                            if (date.getHours() < 10) {
+                                hour = "0"+ date.getHours()
+                            } else {
+                                hour = date.getHours()
+                            }
+                            mins = "0"
+                            if (date.getMinutes().toString().length === 1) {
+                                mins = "0" + date.getMinutes()
+                            } else {
+                                mins = date.getMinutes().toString()
+                            }
+                            let endTime = hour + ":" + mins
+                            let item = '<li class="row" id="' + time.id +'"> <div> <a class="taskId fs-6 float-start"  target="_blank" href="https://crm.cms-sudhaus.de/company/personal/user/' + userId +'/tasks/task/view/' + time.taskId +'/">#' + time.taskId + '</a> <div class="task-time float-end fs-6">' + startTime + ' - '+ endTime + ' | ' + minutesSpent + 'm' + '</div> </div> <div class="taskTitle my-1">' + tasks[time.taskId].title +'</div> </li>'
+                            if (date.getDay() === 1) {
+                                $("#monday").append(item)
+                                mondayTotal = mondayTotal + time.minutes
+                                mondayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            } else if(date.getDay() === 2) {
+                                $("#tuesday").append(item)
+                                tuesdayTotal = tuesdayTotal + time.minutes
+                                tuesdayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            } else if(date.getDay() === 3) {
+                                $("#wednesday").append(item)
+                                wednesdayTotal = wednesdayTotal + time.minutes
+                                wednesdayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            } else if(date.getDay() === 4) {
+                                $("#thursday").append(item)
+                                thursdayTotal = thursdayTotal + time.minutes
+                                thursdayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            } else if(date.getDay() === 5) {
+                                $("#friday").append(item)
+                                fridayTotal = fridayTotal + time.minutes
+                                fridayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            } else  if(date.getDate() === 6) {
+                                $("#saturday").append(item)
+                                saturdayTotal = saturdayTotal + time.minutes
+                                saturdayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            } else  if(date.getDate() === 7) {
+                                $("#sunday").append(item)
+                                sundayTotal = sundayTotal + time.minutes
+                                sundayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
+                            }
+
+                    }
+
+                    }
+                    let mondayTitle = "Montag - " + (mondayTotal / 60).toFixed(2) + "h"
+                    let tuesdayTitle = "Dienstag - " + (tuesdayTotal / 60).toFixed(2) + "h"
+                    let wednesdayTitle = "Mittwoch - " + (wednesdayTotal / 60).toFixed(2) + "h"
+                    let thursdayTitle = "Donnerstag - " + (thursdayTotal / 60).toFixed(2) + "h"
+                    let fridayTitle = "Freitag - " + (fridayTotal / 60).toFixed(2) + "h"
+                    let saturdayTitle = "Samstag - " + (saturdayTotal / 60).toFixed(2) + "h"
+                    let sundayTitle = "Sonntag - " + (sundayTotal / 60).toFixed(2) + "h"
+                    $("#mondayTitle").text(mondayTitle)
+                    $("#tuesdayTitle").text(tuesdayTitle)
+                    $("#wednesdayTitle").text(wednesdayTitle)
+                    $("#thursdayTitle").text(thursdayTitle)
+                    $("#fridayTitle").text(fridayTitle)
+                    $("#saturdayTitle").text(saturdayTitle)
+                    $("#sundayTitle").text(sundayTitle)
+
+                    $("#monday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddMonday">+</p></div>')
+                    $("#tuesday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddTuesday">+</p></div>')
+                    $("#wednesday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddWednesday">+</p></div>')
+                    $("#thursday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddThursday">+</p></div>')
+                    $("#friday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddFriday">+</p></div>')
+                    $("#saturday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddSaturday">+</p></div>')
+                    $("#sunday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddSunday">+</p></div>')
+                    $("#quickAddMonday").click(function () {
+                        if(mondayQuickTime != null) {
+                            quickAdd(mondayQuickTime)
+                            currentQuick = mondayQuickTime
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate()))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+
+                    $("#quickAddTuesday").click(function () {
+                        if(tuesdayQuickTime != null) {
+                            quickAdd(tuesdayQuickTime)
+                            currentQuick = tuesdayQuickTime
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate() + 1))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+
+                    $("#quickAddWednesday").click(function () {
+                        if(wednesdayQuickTime != null) {
+                            quickAdd(wednesdayQuickTime)
+                            currentQuick = wednesdayQuickTime
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate() + 2))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+                    $("#quickAddThursday").click(function () {
+                        if(thursdayQuickTime != null) {
+                            quickAdd(thursdayQuickTime)
+                            currentQuick = thursdayQuickTime
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate() + 3))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+
+                    $("#quickAddFriday").click(function () {
+                        if(fridayQuickTime != null) {
+                            quickAdd(fridayQuickTime)
+                            currentQuick = fridayQuickTime
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate() + 4))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+
+
+                    $("#quickAddSaturday").click(function () {
+                        currentQuick = saturdayQuickTime
+                        if(saturdayQuickTime != null) {
+                            quickAdd(saturdayQuickTime)
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate() + 5))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+
+                    $("#quickAddSunday").click(function () {
+                        currentQuick = sundayQuickTime
+                        if(sundayQuickTime != null) {
+                            quickAdd(sundayQuickTime)
+                        } else {
+                            let firstDayOfWeek = new Date(currentStartDate)
+                            let quickAddTime = new Date(firstDayOfWeek.setDate(firstDayOfWeek.getDate() + 6))
+                            quickAdd(new Date(quickAddTime.setHours(8)))
+                            currentQuick = new Date(quickAddTime.setHours(8))
+                        }
+                    })
+                }
+
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+                return false;
+            }
+        }
+
+        function dateDifference(first, second) {
+            try {
+                return Math.round((second-first)/(1000*60*60*24));
+            } catch (e) {
+                return 7
+            }
+        }
+        function addMinutes(date, minutes) {
+            return new Date(date.getTime() + minutes*60000);
+        }
+        function loadTasks(ids) {
+            try {
+                let token = getCookie("bx24_token")
+                let url = apiUrl + "tasks/listByIds"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : token,
+                    "ids" : "[" + ids.toString() + "]"
+                }
+                xhttp.send(JSON.stringify(json))
+
+                for (let task of JSON.parse(xhttp.responseText)) {
+                    tasks[task.id] = task
+                }
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+        }
+
+        function loadTask(id) {
+            try {
+                let token = getCookie("bx24_token")
+                let url = apiUrl + "tasks/get"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : token,
+                    "id" : id
+                }
+                xhttp.send(JSON.stringify(json))
+
+                tasks[JSON.parse(xhttp.responseText).id] = JSON.parse(xhttp.responseText)
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
             }
 
+        }
+
+        function loadSearchTasks() {
+            try {
+                let token = getCookie("bx24_token")
+                let url = apiUrl + "tasks/search"
+                let userId = getCookie("bx24_user_id")
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, true);
+                xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let query = document.getElementById("taskSearchId").value;
+                let onlyActive = document.getElementById("taskSearchOnlyActive").checked
+                let onlyResponsible = document.getElementById("taskSearchResponsibleOnly").checked
+                let onlyAuditor = document.getElementById("taskSearchAuditorOnly").checked
+                let onlyAccomplice = document.getElementById("taskSearchComplianceOnly").checked
+                let json = {
+                    "auth" : token,
+                    "responsible" : onlyResponsible,
+                    "auditor" : onlyAuditor,
+                    "accomplice" : onlyAccomplice,
+                    "query" : "%" + query + "%",
+                    "active" : onlyActive
+                }
+                xhttp.send(JSON.stringify(json))
+                xhttp.onload = function () {
+                    $("#taskSearchResults").empty()
+                    let json = getCookie("pins")
+                    let pins = JSON.parse(json)
+                    for (let task of JSON.parse(xhttp.responseText)) {
+                        if(pins.includes(task.id)) {
+                            $("#taskSearchResults").append('<li class="row" id="se#' + task.id +'"> <div> <div class="searchTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="searchId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
+
+                        } else {
+                            $("#taskSearchResults").append('<li class="row" id="se#' + task.id +'"> <div> <div class="searchTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="searchId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 favStarSearch">☆</div></div></li>')
+
+                        }}
+
+                    $(".activeFavStar").hover(
+                        function()
+                        {
+                            $(this).text("☆");
+                        },
+
+                        function()
+                        {
+                            $(this).text("★");
+
+                        }).click(function () {
+                        if($(this).parent().parent().attr('id').toString().includes("se#")) {
+                            removePin($(this).parent().parent().attr('id').toString().replace("se#", ""))
+                            loadSearchTasks()
+                        }
+                    })
+
+                    $(".favStarSearch").hover(
+                        function()
+                        {
+                            $(this).text("★");
+                        },
+
+                        function()
+                        {
+                            $(this).text("☆");
+
+                        }).click(function () {
+                        addPin($(this).parent().parent().attr('id').toString().replace("se#", ""))
+                    })
+                }
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+
+        function loadRecommends() {
+            try {
+                $("#taskRec").empty()
+                loadPins()
+                let token = getCookie("bx24_token")
+                let url = apiUrl + "tasks/recommend"
+                let userId = getCookie("bx24_user_id")
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : token,
+                }
+                xhttp.send(JSON.stringify(json))
+                xhttp.onload = function () {
+                    let pinJson = getCookie("pins")
+                    if(pinJson == null) {
+                        document.cookie = "pins=" + "[]" + ";" + expires + ";path=/";
+                        pinJson = getCookie("pins")
+                    }
+                    let pins = JSON.parse(pinJson)
+                    for (let task of JSON.parse(xhttp.responseText)) {
+                        tasks[task.id] = task
+                        if(!pins.includes(task.id)) {
+                            $("#taskRec").append('<li class="row" id="rec#' + task.id +'"> <div> <div class="recTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="recId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 favStar">☆</div></div></li>')
+                        }}
+                    $(".favStar").hover(
+                        function()
+                        {
+                            $(this).text("★");
+                        },
+
+                        function()
+                        {
+                            $(this).text("☆");
+
+                        }).click(function () {
+                        console.log($(this).parent())
+                        addPin($(this).parent().parent().attr('id').toString().replace("rec#", ""))
+                    })
+                    $(".activeFavStar").hover(
+                        function()
+                        {
+                            $(this).text("☆");
+                        },
+
+                        function()
+                        {
+                            $(this).text("★");
+
+                        }).click(function () {
+                        if($(this).parent().parent().attr('id').toString().includes("pin#")) {
+                            removePin($(this).parent().parent().attr('id').toString().replace("pin#", ""))
+                            loadSearchTasks()
+                        }
+                    })
+                }
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+
+        function loadQuickAddRecommends() {
+            try {
+                $("#quickadd-taskrec").empty()
+                loadQuickAddPins()
+                let token = getCookie("bx24_token")
+                let url = apiUrl + "tasks/recommend"
+                let userId = getCookie("bx24_user_id")
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : token,
+                }
+                xhttp.send(JSON.stringify(json))
+                xhttp.onload = function () {
+                    let pinJson = getCookie("pins")
+                    if(pinJson == null) {
+                        document.cookie = "pins=" + "[]" + ";" + expires + ";path=/";
+                        pinJson = getCookie("pins")
+                    }
+                    let pins = JSON.parse(pinJson)
+                    for (let task of JSON.parse(xhttp.responseText)) {
+                        tasks[task.id] = task
+                        if(!pins.includes(task.id)) {
+                            $("#quickadd-taskrec").append('<li class="row" id="quickRec#' + task.id +'"> <div> <div class="recTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="recId">#' + task.id + '</a> ' + task.title +'</div></div></li>')
+                        }}
+
+                }
+                $("#quickadd-taskrec").on("click", "li", function () {
+                    id = $(this).attr("id")
+                    if (id.includes("quickRec#")) {
+                        $(this).attr('id')
+                        id = id.replace("quickRec#", "")
+                        $("#quickadd-window").hide()
+                        addTime(currentQuick ,id)
+                    } else if (id.includes("pin#")) {
+                        $(this).attr('id')
+                        id = id.replace("pin#", "")
+                        $("#quickadd-window").hide()
+                        addTime(currentQuick ,id)
+                    }
+                })
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+        function loadQuickAddPins() {
+            try {
+                for(let item of document.getElementsByClassName("quickPinned")) {
+                    item.remove();
+                }
+                let json = getCookie("pins")
+                if(json != null) {
+                    let userId = getCookie("bx24_user_id")
+                    let pins = JSON.parse(json)
+                    if (pins.length > 0) {
+                        loadTasks(pins)
+                        for (let pin of pins) {
+                            let task = tasks[pin]
+                            $("#quickadd-taskrec").append('<li class="row quickPinned" id="pin#' + task.id +'"> <div> <div class="pinTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="pinId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
+                        }
+                    }
+                } else {
+                    let date = new Date();
+                    date.setTime(date.getTime() + (365*24*60*60*1000));
+                    let expires = "expires="+ date.toUTCString();
+                    document.cookie = "pins=" + "[]" + ";" + expires + ";path=/";
+                }
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+
+        function loadPins() {
+            try {
+                for(let item of document.getElementsByClassName("pinned")) {
+                    item.remove();
+                }
+                let json = getCookie("pins")
+                if(json != null) {
+                    let userId = getCookie("bx24_user_id")
+                    let pins = JSON.parse(json)
+                    if (pins.length > 0) {
+                        loadTasks(pins)
+                        for (let pin of pins) {
+                            let task = tasks[pin]
+                            $("#taskRec").append('<li class="row pinned" id="pin#' + task.id +'"> <div> <div class="pinTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="pinId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
+                        }
+                    }
+                } else {
+                    let date = new Date();
+                    date.setTime(date.getTime() + (365*24*60*60*1000));
+                    let expires = "expires="+ date.toUTCString();
+                    document.cookie = "pins=" + "[]" + ";" + expires + ";path=/";
+                }
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+        function addPin(taskId) {
+            let date = new Date();
+            date.setTime(date.getTime() + (365*24*60*60*1000));
+            let expires = "expires="+ date.toUTCString();
+            let json = getCookie("pins")
+            if(json == null) {
+                document.cookie = "pins=" + "[]" + ";" + expires + ";path=/";
+            }
+            let pins = JSON.parse(json)
+            if(!pins.includes(parseInt(taskId))) {
+                pins.push(taskId)
+                document.cookie = "pins=[" + pins.toString() + "];" + expires + ";path=/";
+                loadSearchTasks()
+                loadPins()
+                loadRecommends()
+            }
+        }
+
+        function removePin(taskId) {
+            let date = new Date();
+            date.setTime(date.getTime() + (365*24*60*60*1000));
+            let expires = "expires="+ date.toUTCString();
+            let json = getCookie("pins")
+            if(json == null) {
+                document.cookie = "pins=" + "[]" + ";" + expires + ";path=/";
+            }
+            let pins = JSON.parse(json)
+            console.log(pins)
+            if(pins.includes(parseInt(taskId))) {
+                let index = pins.indexOf(parseInt(taskId));
+                console.log(index)
+                if (index >= 0) {
+                    pins.splice(index, 1);
+                    reindex_array(pins);
+                }
+                document.cookie = "pins=[" + pins.toString() + "];" + expires + ";path=/";
+                loadSearchTasks()
+                loadPins()
+                loadRecommends()
+            }
+        }
+        function reindex_array(array) {
+            let result = [];
+            for (let key in array) {
+                result.push(array[key]);
+            }
+            return result;
+        }
+        function setStatisticLinks(startDate) {
+            let days = dateDifference(startDate, new Date())
+            let userId = getCookie("bx24_user_id")
+            let url = "http://svas01.gutenberghaus.lcl/BIStar/rest/odoo/statistic_l7Tg_mitarbeiterarbeitszeiten_Bitrix.html?Person=" + userId + "&TageZurueck=" + days
+            $(".statisticLink").each(function (i, a) {
+                a.href = url
+            })
+        }
+
+        function loadTime(taskId, timeId) {
+            try {
+                let token = getCookie("bx24_token")
+                let url = apiUrl + "time/get"
+                let xhttp = new XMLHttpRequest();
+                xhttp.open("POST", url, false);
+                xhttp.setRequestHeader("Content-Type", "application/json");
+                xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+                xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+                xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+                let json = {
+                    "auth" : token,
+                    "taskId" : taskId,
+                    "timeId" : timeId
+                }
+                xhttp.send(JSON.stringify(json))
+
+                return JSON.parse(xhttp.responseText)
+            } catch (e) {
+                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                logout()
+            }
+
+        }
+
+        function loadUser() {
+            let token = getCookie("bx24_token")
+            let url = apiUrl + "user"
+            let xhttp = new XMLHttpRequest();
+            xhttp.open("POST", url, false);
+            xhttp.setRequestHeader("Content-Type", "application/json");
+            xhttp.setRequestHeader("Access-Control-Allow-Origin", "*")
+            xhttp.setRequestHeader("Access-Control-Allow-Methods", "POST");
+            xhttp.setRequestHeader("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
+            let json = {
+                "auth" : token
+            }
+            json = JSON.stringify(json)
+            try {
+                xhttp.send(json)
+                if  (xhttp.status === 401) {
+                    if (refreshOAuth2() === false) {
+                        window.location.href = redirectUrl
+                    }
+                } else if(xhttp.status === 200) {
+                    let result = JSON.parse(xhttp.responseText)
+
+                    $("#bx24display_name").text(result.NAME + " " + result.LAST_NAME)
+                }
+
+            } catch (e) {
+                    alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
+                    logout()
+                return false;
+            }
+        }
+
+        function addTime(date, taskId) {
+            loadTask(taskId)
+            let offset = (new Date()).getTimezoneOffset() * 60000;
+            date = new Date(date - offset)
+            document.getElementById("create-window-datetime").value = date.toISOString().slice(0,16);
+            document.getElementById("create-window-task-name").innerHTML = tasks[taskId].title
+            $("#window-blocker").show()
+            $("#create-window").show()
+            currentlyCreatingTask = taskId
+        }
+        function logout() {
+            document.cookie = "bx24_refresh" +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            document.cookie = "bx24_token" +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            window.location.reload()
         }
     </script>
 </head>
 <body>
-<div id="window-blocker">
+    <div class="loader">
+
+    </div>
+
+<div id="window-blocker" style="display: none">
     <form action="#" id="create-window" class="justify-content-center">
         <h4 class="row justify-content-center mt-2">Zeit erfassen</h4>
         <hr>
@@ -523,26 +1609,11 @@
         <p id="edit-window-task-name" class="row mx-2 mt-1">Aufgabe #0001 - Drucker Bernd reparieren</p>
         <div class="row mx-2 mt-1">
             <input type="datetime-local" id="edit-window-datetime" class="col-3" required >
-            <div class="col-3">
-                <select id="edit-window-hour-select">
-                    <option value="0">0h</option>
-                    <option value="1">1h</option>
-                    <option value="2">2h</option>
-                    <option value="3">3h</option>
-                    <option value="4">4h</option>
-                    <option value="5">5h</option>
-                    <option value="6">6h</option>
-                    <option value="7">7h</option>
-                    <option value="8">8h</option>
-                </select>
-                <select id="edit-window-minute-select">
-                    <option value="0">0m</option>
-                    <option value="15" selected="selected">15m</option>
-                    <option value="30">30m</option>
-                    <option value="45">45m</option>
-                </select>
-            </div>
-
+            <div class="col-7"></div>
+            <label class="col-2 text-end">
+                <input type="number" id="edit-window-minute-select" max="1.440" required class="col-6">
+                <span class="col-2"> m</span>
+            </label>
         </div>
 
         <textarea id="edit-window-comment" class="mx-2 mt-1 row"  required placeholder="Tätigkeitsbeschreibung.." rows="5" cols="100%"></textarea>
@@ -554,8 +1625,25 @@
             <button type="button" onclick="" id="edit-window-abort-button" class="col-3">Abbrechen</button>
         </div>
     </form>
+
+    <form action="#" id="quickadd-window" class="justify-content-center container">
+        <h4 class="row justify-content-center mt-2">Schnelle Zeiterfassung</h4>
+        <hr>
+        <div class="row mx-2 mt-1">
+            <input type="datetime-local" id="quickadd-window-datetime" class="col-3" disabled>
+        </div>
+        <div class="row mx-2 mt-1">
+            <ul id="quickadd-taskrec">
+
+            </ul>
+        </div>
+        <div class="row mx-1 mb-2 justify-content-center">
+            <button type="button" onclick="" id="quickadd-window-abort-button" class="col-3">Abbrechen</button>
+        </div>
+
+    </form>
 </div>
-<div class="container-fluid" id="main-view">
+<div class="container-fluid" id="main-view" style="display: none">
     <hr style="color: darkblue">
     <div class="row">
         <h1 class="my-2 py-2 ms-5 col-9" style="color: deepskyblue"><img src="img/img.png" class="w-25"> | Zeiterfassung</h1>
@@ -572,7 +1660,7 @@
         <h2 id="calendarWeek" class="col-4 my-3 text-center">KW 1 - 01.01.2002-07.01.2022</h2>
         <button class="col-1" id="next-week-button" onclick="nextWeek()">></button>
         <div class="text-center">
-            <p><a href="https://statlink.de" class="statisticLink">Statistiken ansehen</a></p>
+            <p><a href="https://statlink.de" class="statisticLink" target="_blank">Statistiken ansehen</a></p>
         </div>
     </div>
 
@@ -580,34 +1668,6 @@
         <div class="time-list-col">
             <p id="mondayTitle">Montag 0h</p>
             <ul class="time-list" id="monday">
-                <li class="row" id="test">
-                    <div>
-                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
-                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
-                    </div>
-                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
-                </li>
-                <li class="row" id="test">
-                    <div>
-                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
-                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
-                    </div>
-                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
-                </li>
-                <li class="row" id="test">
-                    <div>
-                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
-                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
-                    </div>
-                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
-                </li>
-                <li class="row" id="test">
-                    <div>
-                        <a class="taskId fs-6 float-start" href="https://test/1234">#1234 </a>
-                        <div class="task-time float-end fs-6">08:00 - 08:30 | 30m</div>
-                    </div>
-                    <div class="taskTitle my-1">Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
-                </li>
                 <div>
                     <p class="taskId fs-2 text-center quickAdd" id="quickAddMonday">+</p>
                 </div>
@@ -677,13 +1737,7 @@
     <div class="row justify-content-center my-2">
         <div>
             <ul id="taskRec">
-                <li class="row" id="pinned#1234">
-                    <div>
-                        <div class="recTitle my-1 float-start fs-6"><a href="https://test/1234" class="recId">#1234 </a> Lustige Aufgabe mit langem Titel aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</div>
-                        <div id="fav#1234" class="float-end fs-4 activeFavStar">★</div>
-                    </div>
 
-                </li>
             </ul>
         </div>
     </div>
@@ -696,12 +1750,12 @@
                 <span class="filters float-end">
                     <label for="taskSearchOnlyActive" class="filterTitle ms-2 me-1">Aktiv</label>
                     <input type="checkbox" id="taskSearchOnlyActive" class="filter">
-                    <label for="executorOnly" class="filterTitle ms-2 me-1">Verantwortlicher</label>
-                    <input type="checkbox" id="executorOnly" class="filter">
-                    <label for="memberOnly" class="filterTitle ms-2 me-1">Mitwirkender</label>
-                    <input type="checkbox" id="memberOnly" class="filter">
-                    <label for="watcherOnly" class="filterTitle ms-2 me-1">Beobachter</label>
-                    <input type="checkbox" id="watcherOnly" class="filter">
+                    <label for="taskSearchResponsibleOnly" class="filterTitle ms-2 me-1">Verantwortlicher</label>
+                    <input type="checkbox" id="taskSearchResponsibleOnly" class="filter">
+                    <label for="taskSearchComplianceOnly" class="filterTitle ms-2 me-1">Mitwirkender</label>
+                    <input type="checkbox" id="taskSearchComplianceOnly" class="filter">
+                    <label for="taskSearchAuditorOnly" class="filterTitle ms-2 me-1">Beobachter</label>
+                    <input type="checkbox" id="taskSearchAuditorOnly" class="filter">
                 </span>
             </form>
         </div>
@@ -727,10 +1781,10 @@
                     <a class="nav-link link-primary" href="/tos"></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link link-primary statisticLink" href="https://stat.com">Statistiken</a>
+                    <a class="nav-link link-primary statisticLink" href="https://stat.com" target="_blank">Statistiken</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link link-primary statisticLink" href="https://crm.cms-sudhaus.de">Bitrix</a>
+                    <a class="nav-link link-primary" href="https://crm.cms-sudhaus.de">Bitrix</a>
                 </li>
             </ul>
         </div>
