@@ -38,7 +38,7 @@
                     document.cookie = "bx24_user_id=" + json.user_id + ";" + expires + ";path=/";
                     document.cookie = "bx24_token=" + json.access_token + ";" + expires + ";path=/";
                     document.cookie = "bx24_refresh=" + json.refresh_token + ";" + expires + ";path=/";
-                    window.location.href = "/index.html"
+                    window.location.href = "/"
                 } else {
                     alert("ERROR WHILE LOGGING IN, REMOTE-SERVER RETURNED " + xhttp.status + " | " + xhttp.responseText)
                 }

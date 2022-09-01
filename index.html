@@ -11,6 +11,10 @@
     <meta charset="UTF-8">
     <title>Zeiterfassung</title>
     <style>
+
+        body {
+            overflow-x: hidden;
+        }
         #weekendDayView {
             border-radius: 5px;
             border: 1px solid transparent;
@@ -20,7 +24,7 @@
             color: #006198;
         }
         #toggleWeekend {
-            border: #006198 1px solid;
+            border: lightgray 1px solid;
             border-radius: 5px;
             outline: none;
             font-size: 40px;
@@ -170,6 +174,10 @@
             font-size: 100%;
         }
 
+        #searchId {
+            text-decoration: none;
+            color: royalblue;
+        }
         #quickadd-taskSearchId {
             border: 2px solid lightskyblue;
             border-radius: 5px;
@@ -220,6 +228,7 @@
             border: 1px solid dodgerblue;
             padding: 7px 7px;
             font-size: 90%;
+            transition: background-color 0.3s;
         }
 
         .recId {
@@ -256,31 +265,43 @@
             cursor: pointer;
             color: white;
             background-color: steelblue;
+            transition: background-color 0.3s;
+
         }
 
         #quickadd-taskrec li:hover a{
             cursor: pointer;
             color: white;
             background-color: steelblue;
+            transition: background-color 0.3s;
         }
 
         #taskRec li:hover {
             cursor: pointer;
             color: white;
             background-color: steelblue;
+            transition: background-color 0.3s;
         }
 
         #taskRec li:hover a{
             cursor: pointer;
             color: white;
             background-color: steelblue;
+            transition: background-color 0.3s;
         }
 
+        #taskSearchResults li:hover a{
+            cursor: pointer;
+            color: white;
+            background-color: steelblue;
+            transition: background-color 0.3s;
+        }
 
         #taskSearchResults li:hover {
             cursor: pointer;
             color: white;
             background-color: steelblue;
+            transition: background-color 0.3s;
         }
 
 
@@ -288,6 +309,7 @@
             cursor: pointer;
             color: white;
             background-color: steelblue;
+            transition: background-color 0.3s;
         }
         .filter {
 
@@ -534,19 +556,22 @@
             color: black;
         }
         #window-blocker {
-            top: 0;
-            display: block;
-            position: absolute;
-            width: 100%;
-            height: auto;
-            overflow:hidden;
+            display: inherit;
+            position: fixed;
+            top:0;
+            bottom: 0;
+            left:0;
+            right:0;
+            min-height:100vh;
+            height: 130%;
+            overflow-y: auto;
             background-color: rgba(0,0,0,0.25);
         }
 
         .loader {
             display: block;
-            border: 16px solid #f3f3f3; /* Light grey */
-            border-top: 16px solid #3498db; /* Blue */
+            border: 10px solid #f3f3f3; /* Light grey */
+            border-top: 10px solid #3498db; /* Blue */
             border-radius: 50%;
             width: 120px;
             height: 120px;
@@ -554,7 +579,7 @@
             top: 45%;
             left: 47%;
             transform: translate(-50%, -50%);
-            animation: spin 2s linear infinite;
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
@@ -584,6 +609,8 @@
         let timeTaskMap = {}
         let tasks = {}
         let currentStartDate = new Date()
+        let totalThisWeek = 0
+        let totalBillableThisWeek = 0
         let apiUrl = "https://zeiterfassung.rfsmediagroup.de/api/"
         let redirectUrl = "http://crm.cms-sudhaus.de/oauth/authorize/?client_id=local.62f147eb80d766.05055944&response_type=code&redirect_uri=https%3A%2F%2Fzeiterfassung.rfsmediagroup.de%2Foauth2.html"
         $(document).ready(function () {
@@ -596,27 +623,27 @@
                 thisWeek(new Date())
                 loadRecommends()
                 loadSearchTasks()
+                $("#weekendDayView").hide()
+                $("#toggleWeekend").text("▼")
+                $("#taskSearchResults").css({"maxHeight" : "200px", "height" : "200px"}, "slow")
                 $(".loader").hide()
+
                 $("#main-view").show()
-                weekendToggler()
                 $("#taskSearch").on('input', function () {
                     loadSearchTasks()
                 })
 
                 $('#main-view').on('click','li', function () {
-                    id = $(this).attr("id")
+                    let id = $(this).attr("id")
                     if (id.includes("rec#")) {
-                        $(this).attr('id')
                         id = id.replace("rec#", "")
 
                         addTime(getLatestDate() ,id)
                     } else if (id.includes("se#")) {
-                        $(this).attr('id')
                         id = id.replace("se#", "")
 
                         addTime(getLatestDate() ,id)
                     } else if (id.includes("pin#")) {
-                        $(this).attr('id')
                         id = id.replace("pin#", "")
 
                         addTime(getLatestDate() ,id)
@@ -625,6 +652,31 @@
                     }
 
                 })
+
+                $('#main-view').keypress(function (event) {
+                    let target = $(event.target)
+                    let id = target.attr("id")
+
+                    if(event.keyCode === 13) {
+                        if (id.includes("rec#")) {
+                            id = id.replace("rec#", "")
+
+                            addTime(getLatestDate() ,id)
+                        } else if (id.includes("se#")) {
+                            id = id.replace("se#", "")
+
+                            addTime(getLatestDate() ,id)
+                        } else if (id.includes("pin#")) {
+                            id = id.replace("pin#", "")
+                            addTime(getLatestDate() ,id)
+                        } else {
+                            editTime(id)
+                        }
+                    }
+
+
+                })
+
                 $("#quickadd-window-abort-button").click(function () {
                     $("#window-blocker").hide()
                     $("#quickadd-window").hide()
@@ -653,6 +705,24 @@
                 $("#edit-window-submit-button").click(function () {
                     saveEditTime()
                 })
+
+                $(document).on('keyup', function(e) {
+                    //27 = ESC, 46 = DELETE, 13 = ENTER
+                    if (e.keyCode === 27) {
+                        $("#window-blocker").hide()
+                        $("#create-window").hide()
+                        $("#edit-window").hide()
+                        $("#quickadd-window").hide()
+                    }  else if (e.keyCode === 13) {
+                        //if ($("#edit-window").is(":visible")) {
+                            //saveEditTime()
+                        //} else if ($("#create-window").is(":visible")) {
+                         //   saveNewTime()
+                        //}
+                    }
+                })
+                $("#logo").hide().show("slide", { direction: "left" }, 1500)
+                $("#userInformation").hide().show("slide", { direction: "right" }, 1500)
             } else {
                 if (getCookie("bx24_refresh") != null && getCookie("bx24_token") != null) {
                     window.location.href = redirectUrl
@@ -772,6 +842,9 @@
                 $("#create-window").hide()
                 $("#window-blocker").hide()
                 thisWeek()
+                $("#create-window-comment").val("")
+                $("#create-window-hour-select").val(0)
+                $("#create-window-minute-select").val(15)
             } catch (e) {
                 alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
                 logout()
@@ -873,9 +946,13 @@
         }
 
         function thisWeek() {
-            currentStartDate = getFirstDayOfWeek(new Date())
-            loadTimes(getFirstDayOfWeek(currentStartDate), getLastDayOfWeek(currentStartDate))
-
+            if(currentStartDate === undefined) {
+                currentStartDate = getFirstDayOfWeek(new Date())
+                loadTimes(getFirstDayOfWeek(currentStartDate), getLastDayOfWeek(currentStartDate))
+            } else {
+                currentStartDate = getFirstDayOfWeek(currentStartDate)
+                loadTimes(getFirstDayOfWeek(currentStartDate), getLastDayOfWeek(currentStartDate))
+            }
         }
 
         function nextWeek() {
@@ -899,6 +976,8 @@
              fridayTotal = 0
              saturdayTotal = 0
              sundayTotal = 0
+             totalThisWeek = 0
+             totalBillableThisWeek = 0
             document.getElementById("calendarWeek").innerHTML = "KW " + getCalendarWeek(startDate) + " | " + startDate.getDate() + "." + (startDate.getMonth()+1) + "." + startDate.getFullYear() + " - " + endDate.getDate() + "." + (endDate.getMonth()+1) + "." + endDate.getFullYear();
             let userId = getCookie("bx24_user_id")
             $("#monday").empty()
@@ -919,8 +998,10 @@
             let json = {
                 "auth" : token,
                 "startDate" : startDate,
-                "endDate" : endDate,
+                "endDate" : new Date(endDate.setDate(endDate.getDate() + 1))
             }
+            console.log(startDate)
+            console.log(endDate)
             json = JSON.stringify(json)
             try {
                 xhttp.send(json)
@@ -972,7 +1053,12 @@
                                 mins = date.getMinutes().toString()
                             }
                             let endTime = hour + ":" + mins
-                            let item = '<li class="row" id="' + time.id +'"> <div> <a class="taskId fs-6 float-start"  target="_blank" href="https://crm.cms-sudhaus.de/company/personal/user/' + userId +'/tasks/task/view/' + time.taskId +'/">#' + time.taskId + '</a> <div class="task-time float-end fs-6">' + startTime + ' - '+ endTime + ' | ' + minutesSpent + 'm' + '</div> </div> <div class="taskTitle my-1">' + tasks[time.taskId].title +'</div> </li>'
+                            let item;
+                            if(tasks[time.taskId] !== undefined) {
+                                 item = '<li class="row" tabindex="1" id="' + time.id +'"> <div> <a class="taskId fs-6 float-start"  target="_blank" href="https://crm.cms-sudhaus.de/company/personal/user/' + userId +'/tasks/task/view/' + time.taskId +'/">#' + time.taskId + '</a> <div class="task-time float-end fs-6">' + startTime + ' - '+ endTime + ' | ' + minutesSpent + 'm' + '</div> </div> <div class="taskTitle my-1">' + tasks[time.taskId].title +'</div> </li>'
+                            } else {
+                                item = '<li class="row" tabindex="1" id="' + time.id + '"> <div> <a class="taskId fs-6 float-start"  target="_blank" href="https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + "Deleted" + '/">#' + time.taskId + '</a> <div class="task-time float-end fs-6">' + startTime + ' - ' + endTime + ' | ' + minutesSpent + 'm' + '</div> </div> <div class="taskTitle my-1">' + "Unknown" + '</div> </li>'
+                            }
                             if (date.getDay() === 1) {
                                 $("#monday").append(item)
                                 mondayTotal = mondayTotal + time.minutes
@@ -993,16 +1079,19 @@
                                 $("#friday").append(item)
                                 fridayTotal = fridayTotal + time.minutes
                                 fridayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
-                            } else  if(date.getDate() === 6) {
+                            } else  if(date.getDay() === 6) {
                                 $("#saturday").append(item)
                                 saturdayTotal = saturdayTotal + time.minutes
                                 saturdayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
-                            } else  if(date.getDate() === 7) {
+                            } else {
                                 $("#sunday").append(item)
                                 sundayTotal = sundayTotal + time.minutes
                                 sundayQuickTime = addMinutes(new Date(time.createdDate), time.minutes)
                             }
-
+                            totalThisWeek = totalThisWeek + time.minutes
+                            if(!time.commentText.startsWith("!")) {
+                                totalBillableThisWeek += time.minutes
+                            }
                     }
 
                     }
@@ -1013,6 +1102,8 @@
                     let fridayTitle = "Freitag - " + (fridayTotal / 60).toFixed(2) + "h"
                     let saturdayTitle = "Samstag - " + (saturdayTotal / 60).toFixed(2) + "h"
                     let sundayTitle = "Sonntag - " + (sundayTotal / 60).toFixed(2) + "h"
+                    let totalTitle = totalThisWeek / 60 + "h"
+                    let totalBillableTitle = totalBillableThisWeek / 60 + "h"
                     $("#mondayTitle").text(mondayTitle)
                     $("#tuesdayTitle").text(tuesdayTitle)
                     $("#wednesdayTitle").text(wednesdayTitle)
@@ -1020,14 +1111,15 @@
                     $("#fridayTitle").text(fridayTitle)
                     $("#saturdayTitle").text(saturdayTitle)
                     $("#sundayTitle").text(sundayTitle)
-
-                    $("#monday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddMonday">+</p></div>')
-                    $("#tuesday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddTuesday">+</p></div>')
-                    $("#wednesday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddWednesday">+</p></div>')
-                    $("#thursday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddThursday">+</p></div>')
-                    $("#friday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddFriday">+</p></div>')
-                    $("#saturday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddSaturday">+</p></div>')
-                    $("#sunday").append('<div><p class="taskId fs-2 text-center quickAdd" id="quickAddSunday">+</p></div>')
+                    $("#totalTitle").text("Insgesamt: " + totalTitle)
+                    $("#totalBillableTitle").text("Fakturierbar: " + totalBillableTitle)
+                    $("#monday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1" id="quickAddMonday">+</p></div>')
+                    $("#tuesday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1" id="quickAddTuesday">+</p></div>')
+                    $("#wednesday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1" id="quickAddWednesday">+</p></div>')
+                    $("#thursday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1"  id="quickAddThursday">+</p></div>')
+                    $("#friday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1" id="quickAddFriday">+</p></div>')
+                    $("#saturday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1" id="quickAddSaturday">+</p></div>')
+                    $("#sunday").append('<div><p class="taskId fs-2 text-center quickAdd" tabindex="1" id="quickAddSunday">+</p></div>')
                     $("#quickAddMonday").click(function () {
                         if(mondayQuickTime != null) {
                             quickAdd(mondayQuickTime)
@@ -1114,8 +1206,7 @@
                 }
 
             } catch (e) {
-                alert("Deine Sitzung ist ausgelaufen, du wirst neu-angemeldet")
-                logout()
+                console.warn(e)
                 return false;
             }
         }
@@ -1210,10 +1301,10 @@
                     let pins = JSON.parse(json)
                     for (let task of JSON.parse(xhttp.responseText)) {
                         if(pins.includes(task.id)) {
-                            $("#taskSearchResults").append('<li class="row" id="se#' + task.id +'"> <div> <div class="searchTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="searchId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
+                            $("#taskSearchResults").append('<li class="row" tabindex="1" id="se#' + task.id +'"> <div> <div class="searchTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="searchId text-decoration-none">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
 
                         } else {
-                            $("#taskSearchResults").append('<li class="row" id="se#' + task.id +'"> <div> <div class="searchTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="searchId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 favStarSearch">☆</div></div></li>')
+                            $("#taskSearchResults").append('<li class="row" tabindex="1" id="se#' + task.id +'"> <div> <div class="searchTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="searchId text-decoration-none">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 favStarSearch">☆</div></div></li>')
 
                         }}
 
@@ -1282,7 +1373,7 @@
                     for (let task of JSON.parse(xhttp.responseText)) {
                         tasks[task.id] = task
                         if(!pins.includes(task.id)) {
-                            $("#taskRec").append('<li class="row" id="rec#' + task.id +'"> <div> <div class="recTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="recId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 favStar">☆</div></div></li>')
+                            $("#taskRec").append('<li class="row" tabindex="1" id="rec#' + task.id +'"> <div> <div class="recTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="recId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 favStar">☆</div></div></li>')
                         }}
                     $(".favStar").hover(
                         function()
@@ -1349,7 +1440,7 @@
                     for (let task of JSON.parse(xhttp.responseText)) {
                         tasks[task.id] = task
                         if(!pins.includes(task.id)) {
-                            $("#quickadd-taskrec").append('<li class="row" id="quickRec#' + task.id +'"> <div> <div class="recTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="recId">#' + task.id + '</a> ' + task.title +'</div></div></li>')
+                            $("#quickadd-taskrec").append('<li class="row" tabindex="1" id="quickRec#' + task.id +'"> <div> <div class="recTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="recId">#' + task.id + '</a> ' + task.title +'</div></div></li>')
                         }}
 
                 }
@@ -1386,7 +1477,7 @@
                         loadTasks(pins)
                         for (let pin of pins) {
                             let task = tasks[pin]
-                            $("#quickadd-taskrec").append('<li class="row quickPinned" id="pin#' + task.id +'"> <div> <div class="pinTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="pinId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
+                            $("#quickadd-taskrec").append('<li class="row quickPinned" tabindex="1" id="pin#' + task.id +'"> <div> <div class="pinTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="pinId text-decoration-none">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
                         }
                     }
                 } else {
@@ -1415,7 +1506,7 @@
                         loadTasks(pins)
                         for (let pin of pins) {
                             let task = tasks[pin]
-                            $("#taskRec").append('<li class="row pinned" id="pin#' + task.id +'"> <div> <div class="pinTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="pinId">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
+                            $("#taskRec").append('<li class="row pinned" tabindex="1" id="pin#' + task.id +'"> <div> <div class="pinTitle my-1 float-start fs-6"><a href="' + 'https://crm.cms-sudhaus.de/company/personal/user/' + userId + '/tasks/task/view/' + task.id +'/" class="pinId text-decoration-none">#' + task.id + '</a> ' + task.title +'</div><div class="float-end fs-4 activeFavStar">★</div></div></li>')
                         }
                     }
                 } else {
@@ -1566,7 +1657,7 @@
 
     </div>
 
-<div id="window-blocker" style="display: none">
+    <div id="window-blocker" style="display: none">
     <form action="#" id="create-window" class="justify-content-center">
         <h4 class="row justify-content-center mt-2">Zeit erfassen</h4>
         <hr>
@@ -1646,8 +1737,8 @@
 <div class="container-fluid" id="main-view" style="display: none">
     <hr style="color: darkblue">
     <div class="row">
-        <h1 class="my-2 py-2 ms-5 col-9" style="color: deepskyblue"><img src="img/img.png" class="w-25"> | Zeiterfassung</h1>
-        <div class="container col-2 my-2 py-2 text-end">
+        <h1 class="my-2 py-2 ms-5 col-9" id="logo" style="color: deepskyblue"><img src="img/img.png" class="w-25"> | Zeiterfassung</h1>
+        <div class="container col-2 my-2 py-2 text-end" id="userInformation">
             <div id="bx24display_name" style="color: royalblue" class="fs-4">bx24display_name</div>
             <h5 onclick="logout()" class="fs-5"><a href="#" class="text-decoration-none">Logout</a></h5>
         </div>
@@ -1659,6 +1750,10 @@
         <button class="col-1" id="before-week-button" onclick="beforeWeek()"><</button>
         <h2 id="calendarWeek" class="col-4 my-3 text-center">KW 1 - 01.01.2002-07.01.2022</h2>
         <button class="col-1" id="next-week-button" onclick="nextWeek()">></button>
+        <div class="position-absolute text-end me-5 bg-transparent" style="pointer-events: none">
+            <div id="totalBillableTitle" style="color: cornflowerblue">Fakturierbar: 0h</div>
+            <div id="totalTitle" style="color: cornflowerblue">Insgesamt: 0h</div>
+        </div>
         <div class="text-center">
             <p><a href="https://statlink.de" class="statisticLink" target="_blank">Statistiken ansehen</a></p>
         </div>
@@ -1784,7 +1879,7 @@
                     <a class="nav-link link-primary statisticLink" href="https://stat.com" target="_blank">Statistiken</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link link-primary" href="https://crm.cms-sudhaus.de">Bitrix</a>
+                    <a class="nav-link link-primary" href="https://crm.cms-sudhaus.de" target="_blank">Bitrix</a>
                 </li>
             </ul>
         </div>
